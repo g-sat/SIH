@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition API</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .api-section {
+            margin-bottom: 40px;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+        
+        .api-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .endpoint {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+            transition: transform 0.2s;
+        }
+        
+        .endpoint:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            margin-right: 15px;
+        }
+        
+        .method.get {
+            background: #28a745;
+            color: white;
+        }
+        
+        .method.post {
+            background: #007bff;
+            color: white;
+        }
+        
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #495057;
+        }
+        
+        .endpoint-desc {
+            margin-top: 10px;
+            color: #6c757d;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-healthy {
+            background: #28a745;
+        }
+        
+        .status-loading {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-error {
+            background: #dc3545;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .test-section {
+            background: #e3f2fd;
+            padding: 30px;
+            border-radius: 15px;
+            margin-top: 30px;
+        }
+        
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px;
+            transition: background 0.3s;
+        }
+        
+        .test-button:hover {
+            background: #0056b3;
+        }
+        
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .footer {
+            background: #343a40;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Face Recognition API</h1>
+            <p>Global AI-Powered Face Detection & Recognition Service</p>
+            <div style="margin-top: 20px;">
+                <span id="status-indicator" class="status-indicator status-loading"></span>
+                <span id="status-text">Checking API status...</span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="api-section">
+                <h2>📡 Available Endpoints</h2>
+                
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/health</span>
+                    <div class="endpoint-desc">Check API health and status</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/load-dataset</span>
+                    <div class="endpoint-desc">Load face recognition dataset</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/start-recording</span>
+                    <div class="endpoint-desc">Start video recording from webcam</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/stop-recording</span>
+                    <div class="endpoint-desc">Stop video recording</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    <span class="endpoint-path">/api/recording-status</span>
+                    <div class="endpoint-desc">Get current recording status</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/extract-frames</span>
+                    <div class="endpoint-desc">Extract frames from recorded video</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/process-frame</span>
+                    <div class="endpoint-desc">Process single frame for face recognition</div>
+                </div>
+                
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    <span class="endpoint-path">/api/process-all-frames</span>
+                    <div class="endpoint-desc">Process all extracted frames</div>
+                </div>
+            </div>
+            
+            <div class="test-section">
+                <h2>🧪 Test API</h2>
+                <p>Test the API endpoints directly from this interface:</p>
+                
+                <button class="test-button" onclick="testHealth()">Test Health Check</button>
+                <button class="test-button" onclick="testLoadDataset()">Load Dataset</button>
+                <button class="test-button" onclick="testRecordingStatus()">Recording Status</button>
+                
+                <div id="test-results" class="result-box" style="display: none;">
+                    <div id="test-output"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🚀 Face Recognition API - Powered by OpenCV & Flask</p>
+            <p>
+                <a href="/api/health" target="_blank">API Health</a> | 
+                <a href="https://github.com/yourusername/face-recognition-api" target="_blank">GitHub</a> |
+                <a href="#" onclick="showDocumentation()">Documentation</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Check API status on page load
+        window.onload = function() {
+            checkApiStatus();
+        };
+
+        async function checkApiStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                const indicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                
+                if (data.status === 'healthy') {
+                    indicator.className = 'status-indicator status-healthy';
+                    statusText.textContent = `API is healthy (Face Recognition: ${data.face_recognition_loaded ? 'Loaded' : 'Not Loaded'})`;
+                } else {
+                    indicator.className = 'status-indicator status-error';
+                    statusText.textContent = 'API is not responding properly';
+                }
+            } catch (error) {
+                const indicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                
+                indicator.className = 'status-indicator status-error';
+                statusText.textContent = 'API is not available';
+            }
+        }
+
+        async function testHealth() {
+            showTestResults();
+            appendTestOutput('Testing health endpoint...\n');
+            
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                appendTestOutput(`✅ Health Check Result:\n${JSON.stringify(data, null, 2)}\n\n`);
+            } catch (error) {
+                appendTestOutput(`❌ Error: ${error.message}\n\n`);
+            }
+        }
+
+        async function testLoadDataset() {
+            showTestResults();
+            appendTestOutput('Loading dataset...\n');
+            
+            try {
+                const response = await fetch('/api/load-dataset', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+                appendTestOutput(`✅ Load Dataset Result:\n${JSON.stringify(data, null, 2)}\n\n`);
+                
+                // Refresh status after loading dataset
+                setTimeout(checkApiStatus, 1000);
+            } catch (error) {
+                appendTestOutput(`❌ Error: ${error.message}\n\n`);
+            }
+        }
+
+        async function testRecordingStatus() {
+            showTestResults();
+            appendTestOutput('Checking recording status...\n');
+            
+            try {
+                const response = await fetch('/api/recording-status');
+                const data = await response.json();
+                appendTestOutput(`✅ Recording Status:\n${JSON.stringify(data, null, 2)}\n\n`);
+            } catch (error) {
+                appendTestOutput(`❌ Error: ${error.message}\n\n`);
+            }
+        }
+
+        function showTestResults() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.style.display = 'block';
+        }
+
+        function appendTestOutput(text) {
+            const outputDiv = document.getElementById('test-output');
+            outputDiv.textContent += text;
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        function showDocumentation() {
+            alert('API Documentation:\n\n' +
+                  '1. Health Check: GET /api/health\n' +
+                  '2. Load Dataset: POST /api/load-dataset\n' +
+                  '3. Start Recording: POST /api/start-recording\n' +
+                  '4. Stop Recording: POST /api/stop-recording\n' +
+                  '5. Recording Status: GET /api/recording-status\n' +
+                  '6. Extract Frames: POST /api/extract-frames\n' +
+                  '7. Process Frame: POST /api/process-frame\n' +
+                  '8. Process All Frames: POST /api/process-all-frames\n\n' +
+                  'See the deployment guide for detailed usage examples.');
+        }
+    </script>
+</body>
+</html>
