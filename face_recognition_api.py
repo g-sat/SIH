@@ -15,6 +15,10 @@ from PIL import Image
 from security_manager import SecurityManager
 from database_manager import DatabaseManager
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)

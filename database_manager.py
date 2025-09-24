@@ -19,21 +19,33 @@ class DatabaseManager:
     def __init__(self, database_url=None, encryption_password=None):
         """
         Initialize database manager with PostgreSQL connection
-        
+
         Args:
             database_url (str): PostgreSQL connection URL
             encryption_password (str): Password for encryption
         """
         self.logger = logging.getLogger(__name__)
-        
+
         # Initialize security manager
         self.security = SecurityManager(encryption_password)
-        
-        # Database connection parameters
-        self.database_url = database_url or os.environ.get(
-            'DATABASE_URL', 
-            'postgresql://localhost:5432/face_recognition'
-        )
+
+        # Database connection parameters - support both URL and individual components
+        if database_url:
+            self.database_url = database_url
+        else:
+            # Build connection URL from environment variables
+            db_host = os.environ.get('DB_HOST', 'localhost')
+            db_name = os.environ.get('DB_NAME', 'face_recognition')
+            db_user = os.environ.get('DB_USER', 'postgres')
+            db_password = os.environ.get('DB_PASSWORD', '')
+            db_port = os.environ.get('DB_PORT', '5432')
+            db_ssl = os.environ.get('DB_SSL', 'false').lower()
+
+            # Build connection string
+            ssl_mode = 'require' if db_ssl == 'true' else 'disable'
+            self.database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}?sslmode={ssl_mode}"
+
+        self.logger.info(f"Database URL configured: {self.database_url.split('@')[0]}@***")
         
         # Connection pool
         self.pool = None
