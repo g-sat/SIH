@@ -636,6 +636,13 @@ class DatabaseManager:
         cursor = conn.cursor()
 
         try:
+            # Convert numpy types to Python types for PostgreSQL compatibility
+            confidence = float(confidence)  # Convert numpy.float32 to Python float
+            if session_id is not None:
+                session_id = int(session_id)
+            if face_id is not None:
+                face_id = int(face_id)
+
             # Insert attendance record
             cursor.execute("""
                 INSERT INTO attendance_records

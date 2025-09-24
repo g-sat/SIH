@@ -61,10 +61,27 @@ class StableFaceRecognitionWithAttendance:
         """Create a new processing session for attendance tracking"""
         try:
             session_name = f"realtime_attendance_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            # Note: We'll need to add a create_session method to DatabaseManager
-            # For now, we'll use a simple session ID
-            self.session_id = 1
-            logger.info(f"Created attendance session: {session_name}")
+
+            if self.database:
+                # Create a session in the database
+                conn = self.database._get_connection()
+                cursor = conn.cursor()
+
+                cursor.execute("""
+                    INSERT INTO processing_sessions (session_id, status, metadata)
+                    VALUES (%s, %s, %s)
+                    RETURNING id;
+                """, (session_name, 'active', '{"type": "realtime_attendance"}'))
+
+                self.session_id = cursor.fetchone()[0]
+                conn.commit()
+                self.database._put_connection(conn)
+
+                logger.info(f"Created attendance session: {session_name} (ID: {self.session_id})")
+            else:
+                self.session_id = None
+                logger.warning("No database connection - session not created")
+
         except Exception as e:
             logger.error(f"Failed to create session: {e}")
             self.session_id = None
@@ -155,7 +172,7 @@ class StableFaceRecognitionWithAttendance:
             attendance_id = self.database.record_attendance(
                 person_name=person_name,
                 confidence=confidence,
-                session_id=self.session_id,
+                session_id=self.session_id,  # This will be None if session creation failed
                 location="Camera_1",
                 device_info={
                     "camera_index": 1,
