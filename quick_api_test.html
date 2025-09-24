@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Quick API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left: 4px solid #28a745;
+        }
+        .error {
+            border-left: 4px solid #dc3545;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.online {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.offline {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Face Recognition API - Quick Test</h1>
+        <p><strong>Backend:</strong> <span id="apiUrl">https://web-production-afa6.up.railway.app</span></p>
+        <p><strong>Status:</strong> <span id="apiStatus" class="status offline">Checking...</span></p>
+
+        <!-- Quick Health Check -->
+        <div class="test-section">
+            <h3>🏥 Health Check</h3>
+            <button class="btn" onclick="quickHealthCheck()">Test Health</button>
+            <div id="healthResult" class="response" style="display: none;"></div>
+        </div>
+
+        <!-- Quick Dataset Load -->
+        <div class="test-section">
+            <h3>📚 Dataset Loading</h3>
+            <button class="btn" onclick="quickDatasetLoad()">Load Dataset</button>
+            <div id="datasetResult" class="response" style="display: none;"></div>
+        </div>
+
+        <!-- Quick Frame Test -->
+        <div class="test-section">
+            <h3>🖼️ Frame Processing Test</h3>
+            <p>This will test with a sample base64 image:</p>
+            <button class="btn" onclick="quickFrameTest()">Test Frame Processing</button>
+            <div id="frameResult" class="response" style="display: none;"></div>
+        </div>
+
+        <!-- All Endpoints Test -->
+        <div class="test-section">
+            <h3>🎯 Test All Endpoints</h3>
+            <button class="btn" onclick="testAllEndpoints()">Run All Tests</button>
+            <div id="allTestsResult" class="response" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://web-production-afa6.up.railway.app';
+
+        // Sample base64 image (small red square)
+        const SAMPLE_IMAGE_BASE64 = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A8A';
+
+        function displayResult(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.className = `response ${isSuccess ? 'success' : 'error'}`;
+            element.style.display = 'block';
+            
+            if (typeof data === 'object') {
+                element.textContent = JSON.stringify(data, null, 2);
+            } else {
+                element.textContent = data;
+            }
+        }
+
+        async function quickHealthCheck() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('apiStatus').className = 'status online';
+                    document.getElementById('apiStatus').textContent = 'Online ✅';
+                    displayResult('healthResult', data, true);
+                } else {
+                    document.getElementById('apiStatus').className = 'status offline';
+                    document.getElementById('apiStatus').textContent = 'Error ❌';
+                    displayResult('healthResult', data, false);
+                }
+            } catch (error) {
+                document.getElementById('apiStatus').className = 'status offline';
+                document.getElementById('apiStatus').textContent = 'Offline ❌';
+                displayResult('healthResult', `Error: ${error.message}`, false);
+            }
+        }
+
+        async function quickDatasetLoad() {
+            try {
+                const response = await fetch(`${API_BASE}/api/load-dataset`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                displayResult('datasetResult', data, response.ok);
+            } catch (error) {
+                displayResult('datasetResult', `Error: ${error.message}`, false);
+            }
+        }
+
+        async function quickFrameTest() {
+            try {
+                const response = await fetch(`${API_BASE}/api/process-frame`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_data: SAMPLE_IMAGE_BASE64,
+                        input_type: 'base64'
+                    })
+                });
+                const data = await response.json();
+                displayResult('frameResult', data, response.ok);
+            } catch (error) {
+                displayResult('frameResult', `Error: ${error.message}`, false);
+            }
+        }
+
+        async function testAllEndpoints() {
+            const results = {};
+            const element = document.getElementById('allTestsResult');
+            element.style.display = 'block';
+            element.textContent = 'Running tests...\n';
+
+            // Test 1: Health Check
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                results.health = { status: response.status, data };
+                element.textContent += `✅ Health Check: ${response.status}\n`;
+            } catch (error) {
+                results.health = { error: error.message };
+                element.textContent += `❌ Health Check: ${error.message}\n`;
+            }
+
+            // Test 2: Load Dataset
+            try {
+                const response = await fetch(`${API_BASE}/api/load-dataset`, { method: 'POST' });
+                const data = await response.json();
+                results.dataset = { status: response.status, data };
+                element.textContent += `✅ Dataset Load: ${response.status} - ${data.faces_loaded || 0} faces\n`;
+            } catch (error) {
+                results.dataset = { error: error.message };
+                element.textContent += `❌ Dataset Load: ${error.message}\n`;
+            }
+
+            // Test 3: Recording Status
+            try {
+                const response = await fetch(`${API_BASE}/api/recording-status`);
+                const data = await response.json();
+                results.recording = { status: response.status, data };
+                element.textContent += `✅ Recording Status: ${response.status}\n`;
+            } catch (error) {
+                results.recording = { error: error.message };
+                element.textContent += `❌ Recording Status: ${error.message}\n`;
+            }
+
+            // Test 4: Process All Frames
+            try {
+                const response = await fetch(`${API_BASE}/api/process-all-frames`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frames_directory: 'extracted_frames' })
+                });
+                const data = await response.json();
+                results.processFrames = { status: response.status, data };
+                element.textContent += `✅ Process All Frames: ${response.status}\n`;
+            } catch (error) {
+                results.processFrames = { error: error.message };
+                element.textContent += `❌ Process All Frames: ${error.message}\n`;
+            }
+
+            // Test 5: Frame Processing
+            try {
+                const response = await fetch(`${API_BASE}/api/process-frame`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image_data: SAMPLE_IMAGE_BASE64,
+                        input_type: 'base64'
+                    })
+                });
+                const data = await response.json();
+                results.frameProcess = { status: response.status, data };
+                element.textContent += `✅ Frame Processing: ${response.status}\n`;
+            } catch (error) {
+                results.frameProcess = { error: error.message };
+                element.textContent += `❌ Frame Processing: ${error.message}\n`;
+            }
+
+            element.textContent += '\n=== DETAILED RESULTS ===\n';
+            element.textContent += JSON.stringify(results, null, 2);
+        }
+
+        // Auto-run health check on page load
+        window.addEventListener('load', () => {
+            setTimeout(quickHealthCheck, 500);
+        });
+    </script>
+</body>
+</html>

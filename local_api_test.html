@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎥 Local API Test - Video Recording</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px 30px;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online {
+            background: #28a745;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .recording-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .recording-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b6b;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .response-area {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .recording-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .recording-status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 15px;
+        }
+
+        .recording-status.idle {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .recording-status.recording {
+            background: #f8d7da;
+            color: #721c24;
+            animation: pulse 1s infinite;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .camera-preview {
+            background: #000;
+            border-radius: 8px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .video-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .video-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 Local API Test - Video Recording</h1>
+            <p>Test video recording features on your local API server</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Checking connection...</span>
+            </div>
+            <div>
+                <strong>Local API:</strong> http://localhost:5000
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="alert alert-info">
+                <strong>📋 Note:</strong> This page tests your LOCAL API server for video recording features. 
+                Make sure your local API is running on http://localhost:5000
+            </div>
+
+            <!-- Video Recording Section -->
+            <div class="recording-section">
+                <h3>🎬 Video Recording</h3>
+                <p>Record video using your local camera and process it for face recognition.</p>
+
+                <div class="grid">
+                    <div>
+                        <div class="form-group">
+                            <label for="recordDuration">Recording Duration (seconds):</label>
+                            <input type="number" id="recordDuration" value="10" min="1" max="60">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="cameraIndex">Camera Index:</label>
+                            <select id="cameraIndex">
+                                <option value="0">Camera 0 (Default)</option>
+                                <option value="1">Camera 1 (External)</option>
+                                <option value="2">Camera 2</option>
+                            </select>
+                        </div>
+
+                        <div class="recording-controls">
+                            <button class="btn btn-success" id="startBtn" onclick="startRecording()">
+                                🎬 Start Recording
+                            </button>
+                            <button class="btn btn-danger" id="stopBtn" onclick="stopRecording()" disabled>
+                                ⏹️ Stop Recording
+                            </button>
+                            <button class="btn" onclick="checkRecordingStatus()">
+                                📊 Check Status
+                            </button>
+                        </div>
+
+                        <div id="recordingStatusDiv" class="recording-status idle">
+                            📹 Status: Ready to record
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="camera-preview" id="cameraPreview">
+                            📷 Camera preview will appear here during recording
+                        </div>
+                    </div>
+                </div>
+
+                <div id="recordingResponse" class="response-area" style="display: none;"></div>
+            </div>
+
+            <!-- Frame Processing Section -->
+            <div class="recording-section">
+                <h3>🖼️ Frame Processing</h3>
+                <p>Extract and process frames from recorded videos.</p>
+
+                <div class="form-group">
+                    <label for="videoFile">Video File:</label>
+                    <input type="text" id="videoFile" value="recorded_video.mp4" 
+                           placeholder="Enter video filename">
+                </div>
+
+                <div class="form-group">
+                    <label for="frameInterval">Frame Interval (seconds):</label>
+                    <input type="number" id="frameInterval" value="1.0" step="0.1" min="0.1">
+                </div>
+
+                <div class="recording-controls">
+                    <button class="btn" onclick="extractFrames()">
+                        🎞️ Extract Frames
+                    </button>
+                    <button class="btn btn-success" onclick="processAllFrames()">
+                        🎯 Process All Frames
+                    </button>
+                </div>
+
+                <div id="frameResponse" class="response-area" style="display: none;"></div>
+            </div>
+
+            <!-- Recorded Videos List -->
+            <div class="recording-section">
+                <h3>📁 Recorded Videos</h3>
+                <p>List of videos recorded in this session.</p>
+                
+                <button class="btn" onclick="refreshVideoList()">🔄 Refresh List</button>
+                
+                <div id="videoList" class="video-list">
+                    <p>No videos recorded yet. Start recording to see videos here.</p>
+                </div>
+            </div>
+
+            <!-- Quick Tests -->
+            <div class="recording-section">
+                <h3>⚡ Quick Tests</h3>
+                <p>Quick tests to verify local API functionality.</p>
+
+                <div class="recording-controls">
+                    <button class="btn" onclick="testHealth()">🏥 Health Check</button>
+                    <button class="btn" onclick="testDataset()">📚 Load Dataset</button>
+                    <button class="btn" onclick="testAllEndpoints()">🎯 Test All</button>
+                </div>
+
+                <div id="quickTestResponse" class="response-area" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000';
+        let recordingInterval = null;
+        let recordingStartTime = null;
+
+        // Display response
+        function displayResponse(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            
+            if (typeof data === 'object') {
+                element.textContent = JSON.stringify(data, null, 2);
+            } else {
+                element.textContent = data;
+            }
+            
+            element.style.borderLeft = isSuccess ? '4px solid #28a745' : '4px solid #dc3545';
+        }
+
+        // Update status
+        function updateStatus(isOnline, message) {
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            
+            if (isOnline) {
+                dot.classList.add('online');
+                text.textContent = message || 'Local API Online ✅';
+            } else {
+                dot.classList.remove('online');
+                text.textContent = message || 'Local API Offline ❌';
+            }
+        }
+
+        // Check API health
+        async function checkApiHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    updateStatus(true, 'Local API Online ✅');
+                    return true;
+                } else {
+                    updateStatus(false, 'API Error ❌');
+                    return false;
+                }
+            } catch (error) {
+                updateStatus(false, 'Connection Failed ❌');
+                return false;
+            }
+        }
+
+        // Start recording
+        async function startRecording() {
+            try {
+                const duration = document.getElementById('recordDuration').value;
+                const cameraIndex = document.getElementById('cameraIndex').value;
+                
+                const response = await fetch(`${API_BASE}/api/start-recording`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        duration: parseInt(duration),
+                        camera_index: parseInt(cameraIndex)
+                    })
+                });
+                
+                const data = await response.json();
+                displayResponse('recordingResponse', data, response.ok);
+                
+                if (response.ok && data.success) {
+                    // Update UI for recording state
+                    document.getElementById('startBtn').disabled = true;
+                    document.getElementById('stopBtn').disabled = false;
+                    document.getElementById('recordingStatusDiv').className = 'recording-status recording';
+                    document.getElementById('recordingStatusDiv').textContent = '🔴 Recording in progress...';
+                    
+                    // Start countdown
+                    recordingStartTime = Date.now();
+                    recordingInterval = setInterval(updateRecordingStatus, 1000);
+                    
+                    // Auto-stop after duration
+                    setTimeout(() => {
+                        if (recordingInterval) {
+                            stopRecording();
+                        }
+                    }, parseInt(duration) * 1000);
+                }
+                
+            } catch (error) {
+                displayResponse('recordingResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        // Stop recording
+        async function stopRecording() {
+            try {
+                const response = await fetch(`${API_BASE}/api/stop-recording`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                displayResponse('recordingResponse', data, response.ok);
+                
+                // Reset UI
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('recordingStatusDiv').className = 'recording-status idle';
+                document.getElementById('recordingStatusDiv').textContent = '📹 Recording stopped';
+                
+                if (recordingInterval) {
+                    clearInterval(recordingInterval);
+                    recordingInterval = null;
+                }
+                
+                // Refresh video list
+                setTimeout(refreshVideoList, 1000);
+                
+            } catch (error) {
+                displayResponse('recordingResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        // Update recording status
+        function updateRecordingStatus() {
+            if (recordingStartTime) {
+                const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+                const duration = document.getElementById('recordDuration').value;
+                const remaining = Math.max(0, duration - elapsed);
+                
+                document.getElementById('recordingStatusDiv').textContent = 
+                    `🔴 Recording... ${elapsed}s elapsed, ${remaining}s remaining`;
+            }
+        }
+
+        // Check recording status
+        async function checkRecordingStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/recording-status`);
+                const data = await response.json();
+                displayResponse('recordingResponse', data, response.ok);
+                
+                if (data.recording) {
+                    document.getElementById('recordingStatusDiv').className = 'recording-status recording';
+                    document.getElementById('recordingStatusDiv').textContent = '🔴 Recording active';
+                } else {
+                    document.getElementById('recordingStatusDiv').className = 'recording-status idle';
+                    document.getElementById('recordingStatusDiv').textContent = '📹 Ready to record';
+                }
+                
+            } catch (error) {
+                displayResponse('recordingResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        // Extract frames
+        async function extractFrames() {
+            try {
+                const videoFile = document.getElementById('videoFile').value;
+                const frameInterval = document.getElementById('frameInterval').value;
+                
+                const response = await fetch(`${API_BASE}/api/extract-frames`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        video_path: videoFile,
+                        frame_interval: parseFloat(frameInterval)
+                    })
+                });
+                
+                const data = await response.json();
+                displayResponse('frameResponse', data, response.ok);
+                
+            } catch (error) {
+                displayResponse('frameResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        // Process all frames
+        async function processAllFrames() {
+            try {
+                const response = await fetch(`${API_BASE}/api/process-all-frames`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        frames_directory: 'extracted_frames'
+                    })
+                });
+                
+                const data = await response.json();
+                displayResponse('frameResponse', data, response.ok);
+                
+            } catch (error) {
+                displayResponse('frameResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        // Refresh video list
+        function refreshVideoList() {
+            const videoList = document.getElementById('videoList');
+            videoList.innerHTML = '<p>📁 Checking for recorded videos...</p>';
+            
+            // This would typically fetch from an endpoint that lists files
+            // For now, we'll show a placeholder
+            setTimeout(() => {
+                videoList.innerHTML = `
+                    <div class="video-item">
+                        <span>📹 recorded_video.mp4</span>
+                        <button class="btn" onclick="processVideo('recorded_video.mp4')">Process</button>
+                    </div>
+                    <p><em>Note: Video files are saved in the API server directory</em></p>
+                `;
+            }, 1000);
+        }
+
+        // Process specific video
+        function processVideo(filename) {
+            document.getElementById('videoFile').value = filename;
+            extractFrames();
+        }
+
+        // Quick tests
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                displayResponse('quickTestResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('quickTestResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        async function testDataset() {
+            try {
+                const response = await fetch(`${API_BASE}/api/load-dataset`, { method: 'POST' });
+                const data = await response.json();
+                displayResponse('quickTestResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('quickTestResponse', `Error: ${error.message}`, false);
+            }
+        }
+
+        async function testAllEndpoints() {
+            const results = {};
+            const element = document.getElementById('quickTestResponse');
+            element.style.display = 'block';
+            element.textContent = 'Running comprehensive tests...\n';
+
+            // Test health
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                results.health = { status: response.status, success: response.ok };
+                element.textContent += `✅ Health: ${response.status}\n`;
+            } catch (error) {
+                results.health = { error: error.message };
+                element.textContent += `❌ Health: ${error.message}\n`;
+            }
+
+            // Test dataset
+            try {
+                const response = await fetch(`${API_BASE}/api/load-dataset`, { method: 'POST' });
+                const data = await response.json();
+                results.dataset = { status: response.status, faces: data.faces_loaded || 0 };
+                element.textContent += `✅ Dataset: ${response.status} (${data.faces_loaded || 0} faces)\n`;
+            } catch (error) {
+                results.dataset = { error: error.message };
+                element.textContent += `❌ Dataset: ${error.message}\n`;
+            }
+
+            // Test recording status
+            try {
+                const response = await fetch(`${API_BASE}/api/recording-status`);
+                const data = await response.json();
+                results.recording = { status: response.status, recording: data.recording };
+                element.textContent += `✅ Recording Status: ${response.status}\n`;
+            } catch (error) {
+                results.recording = { error: error.message };
+                element.textContent += `❌ Recording Status: ${error.message}\n`;
+            }
+
+            element.textContent += '\n=== DETAILED RESULTS ===\n';
+            element.textContent += JSON.stringify(results, null, 2);
+        }
+
+        // Initialize page
+        window.addEventListener('load', () => {
+            checkApiHealth();
+            setInterval(checkApiHealth, 30000); // Check every 30 seconds
+        });
+    </script>
+</body>
+</html>
