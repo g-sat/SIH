@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Face Recognition API Tester</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .api-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #667eea;
+        }
+
+        .api-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .api-section p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .response-area {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background: #28a745;
+        }
+
+        .status-error {
+            background: #dc3545;
+        }
+
+        .status-warning {
+            background: #ffc107;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .file-upload.dragover {
+            background: rgba(102, 126, 234, 0.1);
+            border-color: #764ba2;
+        }
+
+        .preview-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .config-section {
+            background: #e8f4fd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+
+        .config-section h4 {
+            color: #0066cc;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Face Recognition API Tester</h1>
+            <p>Test all endpoints of your deployed Face Recognition API</p>
+            <p><strong>Backend:</strong> https://web-production-afa6.up.railway.app/</p>
+        </div>
+
+        <div class="content">
+            <!-- Configuration Section -->
+            <div class="config-section">
+                <h4>⚙️ API Configuration</h4>
+                <div class="form-group">
+                    <label for="apiUrl">API Base URL:</label>
+                    <input type="text" id="apiUrl" value="https://web-production-afa6.up.railway.app" 
+                           placeholder="Enter API base URL">
+                </div>
+            </div>
+
+            <div class="grid">
+                <!-- Health Check -->
+                <div class="api-section">
+                    <h3>🏥 Health Check</h3>
+                    <p>Check if the API server is running and healthy.</p>
+                    <button class="btn" onclick="testHealthCheck()">Check Health</button>
+                    <div id="healthResponse" class="response-area" style="display: none;"></div>
+                </div>
+
+                <!-- Load Dataset -->
+                <div class="api-section">
+                    <h3>📚 Load Dataset</h3>
+                    <p>Load the face recognition dataset into memory.</p>
+                    <button class="btn btn-success" onclick="loadDataset()">Load Dataset</button>
+                    <div id="datasetResponse" class="response-area" style="display: none;"></div>
+                </div>
+
+                <!-- Recording Status -->
+                <div class="api-section">
+                    <h3>📹 Recording Status</h3>
+                    <p>Check the current video recording status.</p>
+                    <button class="btn" onclick="checkRecordingStatus()">Check Status</button>
+                    <div id="recordingStatusResponse" class="response-area" style="display: none;"></div>
+                </div>
+
+                <!-- Start Recording -->
+                <div class="api-section">
+                    <h3>🎬 Start Recording</h3>
+                    <p>Start video recording (may not work on server without camera).</p>
+                    <div class="form-group">
+                        <label for="recordingDuration">Duration (seconds):</label>
+                        <input type="number" id="recordingDuration" value="10" min="1" max="60">
+                    </div>
+                    <div class="form-group">
+                        <label for="cameraIndex">Camera Index:</label>
+                        <input type="number" id="cameraIndex" value="0" min="0" max="5">
+                    </div>
+                    <button class="btn btn-warning" onclick="startRecording()">Start Recording</button>
+                    <div id="startRecordingResponse" class="response-area" style="display: none;"></div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <!-- Process Frame -->
+                <div class="api-section">
+                    <h3>🖼️ Process Frame</h3>
+                    <p>Upload an image to detect and recognize faces.</p>
+                    
+                    <div class="file-upload" id="imageUpload" onclick="document.getElementById('imageFile').click()">
+                        <p>📁 Click to select an image or drag & drop</p>
+                        <input type="file" id="imageFile" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+                        <img id="previewImage" class="preview-image" style="display: none;">
+                    </div>
+                    
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="inputType">Input Type:</label>
+                        <select id="inputType">
+                            <option value="base64">Base64 (Upload)</option>
+                            <option value="file_path">File Path</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-success" onclick="processFrame()">Process Frame</button>
+                    <div class="loading" id="frameLoading">
+                        <div class="spinner"></div>
+                        <p>Processing image...</p>
+                    </div>
+                    <div id="processFrameResponse" class="response-area" style="display: none;"></div>
+                </div>
+
+                <!-- Extract Frames -->
+                <div class="api-section">
+                    <h3>🎞️ Extract Frames</h3>
+                    <p>Extract frames from a recorded video.</p>
+                    <div class="form-group">
+                        <label for="videoPath">Video Path:</label>
+                        <input type="text" id="videoPath" value="recorded_video.mp4" 
+                               placeholder="Path to video file">
+                    </div>
+                    <div class="form-group">
+                        <label for="frameInterval">Frame Interval (seconds):</label>
+                        <input type="number" id="frameInterval" value="1.0" step="0.1" min="0.1">
+                    </div>
+                    <button class="btn" onclick="extractFrames()">Extract Frames</button>
+                    <div id="extractFramesResponse" class="response-area" style="display: none;"></div>
+                </div>
+
+                <!-- Process All Frames -->
+                <div class="api-section">
+                    <h3>🎯 Process All Frames</h3>
+                    <p>Process all extracted frames for face recognition.</p>
+                    <div class="form-group">
+                        <label for="framesDirectory">Frames Directory:</label>
+                        <input type="text" id="framesDirectory" value="extracted_frames" 
+                               placeholder="Directory containing frames">
+                    </div>
+                    <button class="btn btn-success" onclick="processAllFrames()">Process All Frames</button>
+                    <div class="loading" id="allFramesLoading">
+                        <div class="spinner"></div>
+                        <p>Processing all frames...</p>
+                    </div>
+                    <div id="processAllFramesResponse" class="response-area" style="display: none;"></div>
+                </div>
+
+                <!-- Stop Recording -->
+                <div class="api-section">
+                    <h3>⏹️ Stop Recording</h3>
+                    <p>Stop the current video recording session.</p>
+                    <button class="btn btn-warning" onclick="stopRecording()">Stop Recording</button>
+                    <div id="stopRecordingResponse" class="response-area" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedImageBase64 = null;
+        
+        // Get API base URL
+        function getApiUrl() {
+            return document.getElementById('apiUrl').value.trim();
+        }
+        
+        // Display response in a formatted way
+        function displayResponse(elementId, response, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            const statusClass = isSuccess ? 'status-success' : 'status-error';
+            const statusIcon = isSuccess ? '✅' : '❌';
+            
+            let formattedResponse;
+            if (typeof response === 'object') {
+                formattedResponse = JSON.stringify(response, null, 2);
+            } else {
+                formattedResponse = response;
+            }
+            
+            element.innerHTML = `<span class="status-indicator ${statusClass}"></span>${statusIcon} Response:\n${formattedResponse}`;
+            element.style.display = 'block';
+        }
+        
+        // Show loading indicator
+        function showLoading(loadingId) {
+            const loading = document.getElementById(loadingId);
+            if (loading) {
+                loading.style.display = 'block';
+            }
+        }
+        
+        // Hide loading indicator
+        function hideLoading(loadingId) {
+            const loading = document.getElementById(loadingId);
+            if (loading) {
+                loading.style.display = 'none';
+            }
+        }
+        
+        // Health Check
+        async function testHealthCheck() {
+            try {
+                const response = await fetch(`${getApiUrl()}/api/health`);
+                const data = await response.json();
+                displayResponse('healthResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('healthResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Load Dataset
+        async function loadDataset() {
+            try {
+                const response = await fetch(`${getApiUrl()}/api/load-dataset`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                displayResponse('datasetResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('datasetResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Check Recording Status
+        async function checkRecordingStatus() {
+            try {
+                const response = await fetch(`${getApiUrl()}/api/recording-status`);
+                const data = await response.json();
+                displayResponse('recordingStatusResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('recordingStatusResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Start Recording
+        async function startRecording() {
+            try {
+                const duration = document.getElementById('recordingDuration').value;
+                const cameraIndex = document.getElementById('cameraIndex').value;
+                
+                const response = await fetch(`${getApiUrl()}/api/start-recording`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        duration: parseInt(duration),
+                        camera_index: parseInt(cameraIndex)
+                    })
+                });
+                const data = await response.json();
+                displayResponse('startRecordingResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('startRecordingResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Handle image upload
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedImageBase64 = e.target.result.split(',')[1]; // Remove data:image/jpeg;base64, prefix
+                    
+                    // Show preview
+                    const preview = document.getElementById('previewImage');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                    
+                    // Update upload area text
+                    document.querySelector('#imageUpload p').textContent = `📁 Image selected: ${file.name}`;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Process Frame
+        async function processFrame() {
+            if (!selectedImageBase64) {
+                alert('Please select an image first!');
+                return;
+            }
+            
+            try {
+                showLoading('frameLoading');
+                
+                const inputType = document.getElementById('inputType').value;
+                
+                const response = await fetch(`${getApiUrl()}/api/process-frame`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_data: selectedImageBase64,
+                        input_type: inputType
+                    })
+                });
+                const data = await response.json();
+                hideLoading('frameLoading');
+                displayResponse('processFrameResponse', data, response.ok);
+            } catch (error) {
+                hideLoading('frameLoading');
+                displayResponse('processFrameResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Extract Frames
+        async function extractFrames() {
+            try {
+                const videoPath = document.getElementById('videoPath').value;
+                const frameInterval = document.getElementById('frameInterval').value;
+                
+                const response = await fetch(`${getApiUrl()}/api/extract-frames`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        video_path: videoPath,
+                        frame_interval: parseFloat(frameInterval)
+                    })
+                });
+                const data = await response.json();
+                displayResponse('extractFramesResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('extractFramesResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Process All Frames
+        async function processAllFrames() {
+            try {
+                showLoading('allFramesLoading');
+                
+                const framesDirectory = document.getElementById('framesDirectory').value;
+                
+                const response = await fetch(`${getApiUrl()}/api/process-all-frames`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        frames_directory: framesDirectory
+                    })
+                });
+                const data = await response.json();
+                hideLoading('allFramesLoading');
+                displayResponse('processAllFramesResponse', data, response.ok);
+            } catch (error) {
+                hideLoading('allFramesLoading');
+                displayResponse('processAllFramesResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Stop Recording
+        async function stopRecording() {
+            try {
+                const response = await fetch(`${getApiUrl()}/api/stop-recording`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                displayResponse('stopRecordingResponse', data, response.ok);
+            } catch (error) {
+                displayResponse('stopRecordingResponse', `Error: ${error.message}`, false);
+            }
+        }
+        
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('imageUpload');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('imageFile').files = files;
+                handleImageUpload({ target: { files: files } });
+            }
+        });
+        
+        // Auto-test health check on page load
+        window.addEventListener('load', () => {
+            setTimeout(testHealthCheck, 1000);
+        });
+    </script>
+</body>
+</html>
