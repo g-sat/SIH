@@ -155,6 +155,42 @@ class DatabaseManager:
                     completed_at TIMESTAMP WITH TIME ZONE
                 );
             """)
+
+            # Create attendance records table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS attendance_records (
+                    id SERIAL PRIMARY KEY,
+                    person_name VARCHAR(255) NOT NULL,
+                    detection_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    confidence FLOAT NOT NULL,
+                    session_id INTEGER REFERENCES processing_sessions(id),
+                    face_id INTEGER REFERENCES faces(id),
+                    status VARCHAR(50) DEFAULT 'attended',
+                    location VARCHAR(255),
+                    device_info JSONB,
+                    metadata JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                );
+            """)
+
+            # Create attendance summary table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS attendance_summary (
+                    id SERIAL PRIMARY KEY,
+                    date DATE NOT NULL,
+                    person_name VARCHAR(255) NOT NULL,
+                    first_detection TIMESTAMP WITH TIME ZONE,
+                    last_detection TIMESTAMP WITH TIME ZONE,
+                    total_detections INTEGER DEFAULT 1,
+                    average_confidence FLOAT,
+                    status VARCHAR(50) DEFAULT 'attended',
+                    session_ids INTEGER[],
+                    metadata JSONB,
+                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                    UNIQUE(date, person_name)
+                );
+            """)
             
             # Create indexes for better performance
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_faces_person_name ON faces(person_name);")
@@ -579,7 +615,162 @@ class DatabaseManager:
         finally:
             if conn:
                 self._put_connection(conn)
-    
+
+    def record_attendance(self, person_name: str, confidence: float, session_id: int = None,
+                         face_id: int = None, location: str = None, device_info: dict = None) -> int:
+        """
+        Record attendance for a detected person
+
+        Args:
+            person_name (str): Name of the detected person
+            confidence (float): Detection confidence score
+            session_id (int): Optional session ID
+            face_id (int): Optional face ID from faces table
+            location (str): Optional location information
+            device_info (dict): Optional device information
+
+        Returns:
+            int: Attendance record ID
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        try:
+            # Insert attendance record
+            cursor.execute("""
+                INSERT INTO attendance_records
+                (person_name, confidence, session_id, face_id, location, device_info, metadata)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id;
+            """, (
+                person_name,
+                confidence,
+                session_id,
+                face_id,
+                location,
+                json.dumps(device_info) if device_info else None,
+                json.dumps({
+                    'detection_method': 'real_time_camera',
+                    'timestamp': datetime.now().isoformat()
+                })
+            ))
+
+            attendance_id = cursor.fetchone()[0]
+
+            # Update or create attendance summary
+            today = datetime.now().date()
+            session_id_array = [session_id] if session_id is not None else []
+            cursor.execute("""
+                INSERT INTO attendance_summary
+                (date, person_name, first_detection, last_detection, total_detections, average_confidence, session_ids)
+                VALUES (%s, %s, NOW(), NOW(), 1, %s, %s)
+                ON CONFLICT (date, person_name)
+                DO UPDATE SET
+                    last_detection = NOW(),
+                    total_detections = attendance_summary.total_detections + 1,
+                    average_confidence = (attendance_summary.average_confidence * attendance_summary.total_detections + %s) / (attendance_summary.total_detections + 1),
+                    session_ids = CASE
+                        WHEN %s IS NOT NULL THEN array_append(attendance_summary.session_ids, %s)
+                        ELSE attendance_summary.session_ids
+                    END,
+                    updated_at = NOW();
+            """, (today, person_name, confidence, session_id_array, confidence, session_id, session_id))
+
+            conn.commit()
+            self.logger.info(f"Recorded attendance for {person_name} with {confidence:.2f} confidence")
+            return attendance_id
+
+        except Exception as e:
+            conn.rollback()
+            self.logger.error(f"Failed to record attendance: {e}")
+            raise
+        finally:
+            self._put_connection(conn)
+
+    def get_attendance_records(self, date: str = None, person_name: str = None) -> List[Dict]:
+        """
+        Get attendance records with optional filtering
+
+        Args:
+            date (str): Optional date filter (YYYY-MM-DD)
+            person_name (str): Optional person name filter
+
+        Returns:
+            List[Dict]: List of attendance records
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        try:
+            query = """
+                SELECT ar.*, ps.session_id as session_name
+                FROM attendance_records ar
+                LEFT JOIN processing_sessions ps ON ar.session_id = ps.id
+                WHERE 1=1
+            """
+            params = []
+
+            if date:
+                query += " AND DATE(ar.detection_time) = %s"
+                params.append(date)
+
+            if person_name:
+                query += " AND ar.person_name = %s"
+                params.append(person_name)
+
+            query += " ORDER BY ar.detection_time DESC"
+
+            cursor.execute(query, params)
+            records = cursor.fetchall()
+
+            return [dict(record) for record in records]
+
+        except Exception as e:
+            self.logger.error(f"Failed to get attendance records: {e}")
+            return []
+        finally:
+            self._put_connection(conn)
+
+    def get_attendance_summary(self, date: str = None) -> List[Dict]:
+        """
+        Get attendance summary with optional date filtering
+
+        Args:
+            date (str): Optional date filter (YYYY-MM-DD)
+
+        Returns:
+            List[Dict]: List of attendance summaries
+        """
+        conn = self._get_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+        try:
+            query = """
+                SELECT * FROM attendance_summary
+                WHERE 1=1
+            """
+            params = []
+
+            if date:
+                query += " AND date = %s"
+                params.append(date)
+            else:
+                # Default to today if no date specified
+                query += " AND date = CURRENT_DATE"
+
+            query += " ORDER BY first_detection ASC"
+
+            cursor.execute(query, params)
+            summaries = cursor.fetchall()
+
+            return [dict(summary) for summary in summaries]
+
+        except Exception as e:
+            self.logger.error(f"Failed to get attendance summary: {e}")
+            return []
+        finally:
+            self._put_connection(conn)
+
     def close(self):
         """Close database connection pool"""
         if self.pool:

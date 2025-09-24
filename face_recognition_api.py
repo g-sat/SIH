@@ -234,8 +234,96 @@ def health_check():
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "face_recognition_loaded": face_recognizer.is_loaded
+        "face_recognition_loaded": face_recognizer.is_loaded,
+        "features": {
+            "face_recognition": True,
+            "video_processing": True,
+            "database_storage": True,
+            "encryption": True,
+            "attendance_tracking": True
+        }
     })
+
+@app.route('/api/attendance/records', methods=['GET'])
+def get_attendance_records():
+    """Get attendance records with optional filtering"""
+    try:
+        # Get query parameters
+        date = request.args.get('date')  # YYYY-MM-DD format
+        person_name = request.args.get('person_name')
+
+        # Get records from database
+        records = database_manager.get_attendance_records(date=date, person_name=person_name)
+
+        return jsonify({
+            'success': True,
+            'records': records,
+            'count': len(records),
+            'filters': {
+                'date': date,
+                'person_name': person_name
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to get attendance records: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/attendance/summary', methods=['GET'])
+def get_attendance_summary():
+    """Get attendance summary for a specific date"""
+    try:
+        # Get date parameter (defaults to today)
+        date = request.args.get('date')  # YYYY-MM-DD format
+
+        # Get summary from database
+        summary = database_manager.get_attendance_summary(date=date)
+
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'date': date or datetime.now().strftime('%Y-%m-%d'),
+            'total_people': len(summary)
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to get attendance summary: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/attendance/record', methods=['POST'])
+def record_attendance():
+    """Manually record attendance for a person"""
+    try:
+        data = request.get_json()
+
+        if not data or 'person_name' not in data:
+            return jsonify({'error': 'person_name is required'}), 400
+
+        person_name = data['person_name']
+        confidence = data.get('confidence', 1.0)
+        location = data.get('location', 'Manual Entry')
+        device_info = data.get('device_info', {'method': 'manual'})
+
+        # Record attendance
+        attendance_id = database_manager.record_attendance(
+            person_name=person_name,
+            confidence=confidence,
+            location=location,
+            device_info=device_info
+        )
+
+        return jsonify({
+            'success': True,
+            'message': f'Attendance recorded for {person_name}',
+            'attendance_id': attendance_id,
+            'person_name': person_name,
+            'confidence': confidence,
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Failed to record attendance: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/load-dataset', methods=['POST'])
 def load_dataset():
