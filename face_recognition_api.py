@@ -10,9 +10,22 @@ from pathlib import Path
 import threading
 import queue
 from datetime import datetime
+from io import BytesIO
+from PIL import Image
+from security_manager import SecurityManager
+from database_manager import DatabaseManager
+import logging
 
 app = Flask(__name__)
 CORS(app)
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize security and database managers
+security_manager = SecurityManager()
+database_manager = DatabaseManager()
 
 # Global variables for video capture
 video_capture = None
@@ -27,40 +40,103 @@ class FaceRecognitionAPI:
         self.known_faces = []
         self.known_names = []
         self.is_loaded = False
+
+        # Initialize security and database
+        self.security = security_manager
+        self.database = database_manager
+
+        logger.info(f"Face Recognition API initialized with dataset path: {dataset_path}")
+        logger.info("Security encryption enabled for all data storage")
         
     def load_dataset(self):
-        """Load faces from dataset"""
-        print("Loading dataset for API...")
-        
-        dataset_dir = Path(self.dataset_path)
-        if not dataset_dir.exists():
-            return False, "Dataset directory not found"
-        
-        image_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
-        loaded_count = 0
-        
-        for image_path in dataset_dir.iterdir():
-            if image_path.suffix.lower() in image_extensions:
-                name = image_path.stem.rsplit('_', 1)[0]
-                
-                image = cv2.imread(str(image_path))
-                if image is None:
-                    continue
-                
-                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
-                
-                if len(faces) > 0:
-                    (x, y, w, h) = faces[0]
-                    face = gray[y:y+h, x:x+w]
-                    face = cv2.resize(face, (100, 100))
-                    
-                    self.known_faces.append(face)
-                    self.known_names.append(name)
-                    loaded_count += 1
-        
-        self.is_loaded = loaded_count > 0
-        return self.is_loaded, f"Loaded {loaded_count} faces"
+        """Load faces from dataset (database first, then filesystem)"""
+        logger.info("Loading dataset for API...")
+
+        self.known_faces = []
+        self.known_names = []
+
+        try:
+            # First, try to load from database
+            faces_from_db = self.database.get_all_faces()
+
+            if faces_from_db:
+                logger.info(f"Loading {len(faces_from_db)} faces from secure database")
+                for face_record in faces_from_db:
+                    # Convert bytes to OpenCV image
+                    nparr = np.frombuffer(face_record['image_data'], np.uint8)
+                    image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+                    if image is not None:
+                        # Process face for recognition
+                        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                        faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
+
+                        if len(faces) > 0:
+                            (x, y, w, h) = faces[0]
+                            face = gray[y:y+h, x:x+w]
+                            face = cv2.resize(face, (100, 100))
+
+                            self.known_faces.append(face)
+                            self.known_names.append(face_record['person_name'])
+
+                self.is_loaded = len(self.known_faces) > 0
+                return self.is_loaded, f"Loaded {len(self.known_faces)} faces from secure database"
+
+            # If no faces in database, load from filesystem and store in database
+            logger.info("No faces in database, loading from filesystem...")
+            dataset_dir = Path(self.dataset_path)
+            if not dataset_dir.exists():
+                return False, "Dataset directory not found"
+
+            image_extensions = ['.jpg', '.jpeg', '.png', '.bmp']
+            loaded_count = 0
+
+            for image_path in dataset_dir.iterdir():
+                if image_path.suffix.lower() in image_extensions:
+                    try:
+                        name = image_path.stem.rsplit('_', 1)[0]
+
+                        image = cv2.imread(str(image_path))
+                        if image is None:
+                            continue
+
+                        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                        faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
+
+                        if len(faces) > 0:
+                            (x, y, w, h) = faces[0]
+                            face = gray[y:y+h, x:x+w]
+                            face = cv2.resize(face, (100, 100))
+
+                            # Convert original image to bytes for storage
+                            _, buffer = cv2.imencode('.jpg', image)
+                            image_bytes = buffer.tobytes()
+
+                            # Store in secure database
+                            face_id = self.database.store_face_image(
+                                person_name=name,
+                                image_data=image_bytes,
+                                metadata={'source_file': str(image_path), 'loaded_at': datetime.now().isoformat()}
+                            )
+
+                            # Store in memory for immediate use
+                            self.known_faces.append(face)
+                            self.known_names.append(name)
+                            loaded_count += 1
+
+                            logger.debug(f"Stored face {name} with ID {face_id}")
+
+                    except Exception as e:
+                        logger.error(f"Error loading {image_path}: {e}")
+                        continue
+
+            self.is_loaded = loaded_count > 0
+            logger.info(f"Loaded and stored {loaded_count} faces in secure database")
+            return self.is_loaded, f"Loaded {loaded_count} faces and stored securely"
+
+        except Exception as e:
+            logger.error(f"Error loading dataset: {e}")
+            return False, f"Error loading dataset: {str(e)}"
     
     def compare_faces(self, face1, face2):
         """Compare two faces"""
