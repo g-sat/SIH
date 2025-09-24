@@ -45,6 +45,7 @@ class StableFaceRecognitionWithAttendance:
         self.last_stable_detection = {}
         self.stability_threshold = 7  # Need 7 out of 10 detections
         self.confidence_threshold = 0.6  # Minimum confidence for attendance
+        self.recognition_threshold = 0.4  # Minimum confidence to be considered "known" (vs Unknown)
         
         # Attendance tracking
         self.attendance_recorded = set()  # Track who has been recorded today
@@ -139,21 +140,25 @@ class StableFaceRecognitionWithAttendance:
         """Recognize a face using template matching"""
         if len(self.known_faces) == 0:
             return "Unknown", 0.0
-        
+
         face_resized = cv2.resize(face_gray, (100, 100))
-        
+
         best_match_name = "Unknown"
         best_confidence = 0.0
-        
+
         for i, known_face in enumerate(self.known_faces):
             # Use template matching
             result = cv2.matchTemplate(face_resized, known_face, cv2.TM_CCOEFF_NORMED)
             confidence = result[0][0]
-            
+
             if confidence > best_confidence:
                 best_confidence = confidence
                 best_match_name = self.known_names[i]
-        
+
+        # If confidence is below recognition threshold, mark as Unknown
+        if best_confidence < self.recognition_threshold:
+            return "Unknown", best_confidence
+
         return best_match_name, best_confidence
     
     def record_attendance(self, person_name: str, confidence: float):
@@ -221,10 +226,13 @@ class StableFaceRecognitionWithAttendance:
         """Run real-time face recognition with attendance tracking"""
         print("\n🚀 Starting real-time recognition with attendance tracking...")
         print("💡 Features:")
-        print("   - Automatic attendance recording")
+        print("   - Automatic attendance recording for known faces")
+        print("   - Unknown faces marked as 'UNKNOWN PERSON' - NO attendance recorded")
         print("   - Stable detection (7/10 confirmations)")
         print("   - Database storage with encryption")
         print("   - 5-second cooldown between recordings")
+        print(f"   - Recognition threshold: {self.recognition_threshold:.1%} (below = Unknown)")
+        print(f"   - Attendance threshold: {self.confidence_threshold:.1%} (minimum for recording)")
         print("\nPress Enter to start...")
         input()
         
@@ -313,10 +321,24 @@ class StableFaceRecognitionWithAttendance:
                             print(f"🎯 Stable Detection: {name} ({avg_confidence:.1%}) - ATTENDANCE RECORDED")
                     
                     else:
-                        # Unknown face
-                        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 0, 255), 2)
-                        cv2.putText(frame, f"Unknown ({confidence:.1%})", (x, y-10), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                        # Unknown face - not in dataset
+                        color = (0, 0, 255)  # Red for unknown
+                        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 3)  # Thicker border
+
+                        # Create prominent unknown label
+                        label = f"UNKNOWN PERSON ({confidence:.1%})"
+                        label_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)[0]
+
+                        # Draw label background
+                        cv2.rectangle(frame, (x, y-35), (x + label_size[0], y), color, -1)
+                        cv2.putText(frame, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+                        # Add warning text
+                        warning_text = "NOT AUTHORIZED"
+                        cv2.putText(frame, warning_text, (x, y+h+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                        # Log unknown detection (but don't record attendance)
+                        print(f"⚠️  Unknown Person Detected: {confidence:.1%} confidence - NO ATTENDANCE RECORDED")
                 
                 # Add attendance info to frame
                 attendance_text = f"Attendance Today: {len(self.attendance_recorded)}"
